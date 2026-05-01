@@ -5,10 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
-import '../models/domain.dart';
-import '../models/subtopic.dart';
-import '../models/topic.dart';
-import '../providers/domain_provider.dart';
+import '../models/todo_node.dart';
+import '../providers/todo_provider.dart';
 
 class AppSidebar extends ConsumerWidget {
   const AppSidebar({super.key});
@@ -29,47 +27,59 @@ class AppSidebar extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.file_download),
             title: const Text('Export Data'),
-            subtitle: const Text('Save as JSON/TXT'),
+            subtitle: const Text('Save as JSON'),
             onTap: () => _exportData(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.file_upload),
-            title: const Text('Import / Merge Data'),
-            subtitle: const Text('Deep Load JSON/TXT'),
+            title: const Text('Import Data'),
+            subtitle: const Text('Deep Load JSON (Any Depth)'),
             onTap: () => _importData(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_forever),
+            title: const Text('Clear All Data'),
+            subtitle: const Text('Wipes everything'),
+            onTap: () => _clearData(context, ref),
           ),
         ],
       ),
     );
   }
 
+  Future<void> _clearData(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(todoListProvider.notifier);
+    final nodes = ref.read(todoListProvider);
+    for (var node in nodes) {
+      notifier.deleteRootNode(node.id);
+    }
+    if (context.mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared.')));
+    }
+  }
+
+  dynamic _nodeToJson(TodoNode node) {
+    if (node.children.isEmpty) {
+       if (node.notes != null && node.notes!.isNotEmpty) {
+          return node.notes!.split('\n').where((e) => e.trim().isNotEmpty).toList();
+       }
+       return [];
+    }
+    
+    final map = <String, dynamic>{};
+    for (var child in node.children) {
+      map[child.name] = _nodeToJson(child);
+    }
+    return map;
+  }
+
   Future<void> _exportData(BuildContext context, WidgetRef ref) async {
     try {
-      final domains = ref.read(domainListProvider);
+      final nodes = ref.read(todoListProvider);
       final exportMap = <String, dynamic>{};
       
-      for (var d in domains) {
-        final subMap = <String, dynamic>{};
-        for (var s in d.subtopics) {
-          bool allEmptyNotes = s.topics.every((t) => (t.notes ?? '').trim().isEmpty);
-          if (allEmptyNotes) {
-             subMap[s.name] = s.topics.map((t) => t.name).toList();
-          } else {
-             final topicMap = <String, dynamic>{};
-             for (var t in s.topics) {
-                if ((t.notes ?? '').trim().isEmpty) {
-                   topicMap[t.name] = [];
-                } else {
-                   topicMap[t.name] = t.notes!.split('\n')
-                       .where((e) => e.trim().isNotEmpty)
-                       .map((e) => e.replaceFirst(RegExp(r'^- '), '').trim())
-                       .toList();
-                }
-             }
-             subMap[s.name] = topicMap;
-          }
-        }
-        exportMap[d.name] = subMap;
+      for (var node in nodes) {
+        exportMap[node.name] = _nodeToJson(node);
       }
 
       final jsonStr = const JsonEncoder.withIndent('  ').convert(exportMap);
@@ -85,6 +95,36 @@ class AppSidebar extends ConsumerWidget {
     }
   }
 
+  List<TodoNode> _parseJsonLevel(dynamic data, Uuid uuid) {
+    final List<TodoNode> children = [];
+    
+    if (data is Map<String, dynamic>) {
+      data.forEach((key, value) {
+        children.add(TodoNode(
+          id: uuid.v4(),
+          name: key,
+          createdAt: DateTime.now(),
+          children: _parseJsonLevel(value, uuid),
+        ));
+      });
+    } else if (data is List) {
+      for (var item in data) {
+        if (item is Map<String, dynamic>) {
+           children.addAll(_parseJsonLevel(item, uuid));
+        } else {
+           // Treat string array items as individual leaf nodes without children
+           children.add(TodoNode(
+             id: uuid.v4(),
+             name: item.toString(),
+             createdAt: DateTime.now(),
+           ));
+        }
+      }
+    }
+    
+    return children;
+  }
+
   Future<void> _importData(BuildContext context, WidgetRef ref) async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -97,54 +137,23 @@ class AppSidebar extends ConsumerWidget {
         final content = await file.readAsString();
         
         final dynamic decoded = jsonDecode(content);
-        final notifier = ref.read(domainListProvider.notifier);
+        final notifier = ref.read(todoListProvider.notifier);
         const uuid = Uuid();
 
         if (decoded is Map<String, dynamic>) {
-          decoded.forEach((domainName, domainVal) {
-            final mappedSubs = <Subtopic>[];
-            if (domainVal is Map<String, dynamic>) {
-              domainVal.forEach((subName, subVal) {
-                final mappedTopics = <Topic>[];
-                if (subVal is List) {
-                  for (var item in subVal) {
-                    mappedTopics.add(Topic(
-                      id: uuid.v4(),
-                      name: item.toString(),
-                      createdAt: DateTime.now(),
-                    ));
-                  }
-                } else if (subVal is Map<String, dynamic>) {
-                  subVal.forEach((topicName, topicVal) {
-                    String? notes;
-                    if (topicVal is List && topicVal.isNotEmpty) {
-                      notes = topicVal.map((e) => "- $e").join('\n');
-                    }
-                    mappedTopics.add(Topic(
-                      id: uuid.v4(),
-                      name: topicName,
-                      notes: notes,
-                      createdAt: DateTime.now(),
-                    ));
-                  });
-                }
-                
-                mappedSubs.add(Subtopic(
-                  id: uuid.v4(),
-                  name: subName,
-                  topics: mappedTopics,
-                  createdAt: DateTime.now(),
-                ));
-              });
-            }
-            
-            notifier.addDomain(DomainModel(
+          decoded.forEach((key, value) {
+            notifier.addRootNode(TodoNode(
               id: uuid.v4(),
-              name: domainName,
-              subtopics: mappedSubs,
+              name: key,
               createdAt: DateTime.now(),
+              children: _parseJsonLevel(value, uuid),
             ));
           });
+        } else if (decoded is List) {
+           final parsed = _parseJsonLevel(decoded, uuid);
+           for (var n in parsed) {
+              notifier.addRootNode(n);
+           }
         }
         
         if (context.mounted) {

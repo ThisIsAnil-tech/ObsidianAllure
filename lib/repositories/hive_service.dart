@@ -1,27 +1,26 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/domain.dart';
-import '../models/subtopic.dart';
-import '../models/topic.dart';
+import '../models/todo_node.dart';
 import '../models/gamification_profile.dart';
 
 class HiveService {
-  static const String domainBoxName = 'domains';
+  static const String todoBoxName = 'todo_nodes';
   static const String gamificationBoxName = 'gamification';
 
-  static late Box<DomainModel> domainBox;
+  static late Box<TodoNode> todoBox;
   static late Box<GamificationProfile> gamificationBox;
 
   static Future<void> init() async {
     await Hive.initFlutter();
     
+    // Clear old boxes if we are migrating (this will lose old data, but user approved)
+    // await Hive.deleteBoxFromDisk('domains'); // Optional: cleanup old data
+
     // Register Adapters
-    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(DomainModelAdapter());
-    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(SubtopicAdapter());
-    if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(TopicAdapter());
     if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(GamificationProfileAdapter());
+    if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(TodoNodeAdapter());
 
     // Open Boxes
-    domainBox = await Hive.openBox<DomainModel>(domainBoxName);
+    todoBox = await Hive.openBox<TodoNode>(todoBoxName);
     gamificationBox = await Hive.openBox<GamificationProfile>(gamificationBoxName);
 
     // Initialize Gamification profile if empty
@@ -30,18 +29,25 @@ class HiveService {
     }
   }
 
-  // Domain CRUD
-  static List<DomainModel> getDomains() {
-    final domains = domainBox.values.toList();
-    domains.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
-    return domains;
+  // Root Node CRUD
+  static List<TodoNode> getRootNodes() {
+    final nodes = todoBox.values.toList();
+    nodes.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return nodes;
   }
   
-  static Future<void> addDomain(DomainModel domain) => domainBox.put(domain.id, domain);
+  static Future<void> addRootNode(TodoNode node) => todoBox.put(node.id, node);
   
-  static Future<void> updateDomain(DomainModel domain) => domain.save();
+  static Future<void> updateNode(TodoNode node) {
+    if (node.isInBox) {
+      return node.save();
+    }
+    return Future.value();
+  }
   
-  static Future<void> deleteDomain(String id) => domainBox.delete(id);
+  static Future<void> deleteRootNode(String id) => todoBox.delete(id);
+
+  static Future<void> clearAll() => todoBox.clear();
 
   // Gamification Profile
   static GamificationProfile getGamificationProfile() {

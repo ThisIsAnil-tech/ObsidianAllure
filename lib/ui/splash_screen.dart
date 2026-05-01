@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../repositories/hive_service.dart';
-import 'domain_list_screen.dart';
+import 'node_list_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
       
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DomainListScreen()),
+        MaterialPageRoute(builder: (_) => const NodeListScreen()),
       );
     } catch (e) {
       if (mounted) {
