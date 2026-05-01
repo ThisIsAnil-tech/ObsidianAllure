@@ -9,6 +9,8 @@ import 'sidebar.dart';
 import 'search_screen.dart';
 import 'activity_screen.dart';
 import 'pomodoro_screen.dart';
+import 'favorites_screen.dart';
+import '../providers/favorites_provider.dart';
 
 class NodeListScreen extends ConsumerStatefulWidget {
   final TodoNode? parentNode;
@@ -109,14 +111,56 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
   }
 
   void _deleteNode(TodoNode node) {
+    int? deletedIndex;
     if (widget.parentNode == null) {
+      final nodes = ref.read(todoListProvider);
+      deletedIndex = nodes.indexWhere((n) => n.id == node.id);
       ref.read(todoListProvider.notifier).deleteRootNode(node.id);
     } else {
       setState(() {
+        deletedIndex = widget.parentNode!.children.indexWhere((n) => n.id == node.id);
         widget.parentNode!.children = List.from(widget.parentNode!.children)..removeWhere((n) => n.id == node.id);
       });
       ref.read(todoListProvider.notifier).saveRootNode(widget.rootNode!);
     }
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${node.name} deleted'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () {
+            if (widget.parentNode == null) {
+              final notifier = ref.read(todoListProvider.notifier);
+              if (deletedIndex != null && deletedIndex! >= 0) {
+                 final currentNodes = ref.read(todoListProvider);
+                 if (deletedIndex! <= currentNodes.length) {
+                     // Since addRootNode appends, we need to manually insert if order matters.
+                     // The todo_provider handles order via reorderNodes, but for simplicity we append.
+                     notifier.addRootNode(node);
+                     notifier.reorderNodes(currentNodes.length, deletedIndex!);
+                 } else {
+                     notifier.addRootNode(node);
+                 }
+              } else {
+                 notifier.addRootNode(node);
+              }
+            } else {
+              setState(() {
+                if (deletedIndex != null && deletedIndex! >= 0 && deletedIndex! <= widget.parentNode!.children.length) {
+                  widget.parentNode!.children.insert(deletedIndex!, node);
+                } else {
+                  widget.parentNode!.children.add(node);
+                }
+              });
+              ref.read(todoListProvider.notifier).saveRootNode(widget.rootNode!);
+            }
+          },
+        ),
+      ),
+    );
   }
 
   void _duplicateNode(TodoNode node) {
@@ -341,6 +385,7 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
 
   Widget _buildLeafChecklist(TodoNode node) {
     final isCompleted = node.isCompleted;
+    final isLiked = ref.watch(favoritesProvider).contains(node.id);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -350,21 +395,19 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: GestureDetector(
-          onTap: () => _toggleCompletion(node, !isCompleted),
-          child: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isCompleted ? Colors.transparent : Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                width: 2,
-              ),
-              color: isCompleted ? Theme.of(context).colorScheme.primary : Colors.transparent,
+        onTap: () => _toggleCompletion(node, !isCompleted),
+        leading: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isCompleted ? Colors.transparent : Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              width: 2,
             ),
-            child: isCompleted ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+            color: isCompleted ? Theme.of(context).colorScheme.primary : Colors.transparent,
           ),
+          child: isCompleted ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
         ),
         title: Text(
           node.name,
@@ -390,6 +433,13 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              icon: Icon(
+                isLiked ? Icons.favorite : Icons.favorite_border,
+                color: isLiked ? Colors.redAccent : Theme.of(context).primaryColor.withOpacity(0.5),
+              ),
+              onPressed: () => ref.read(favoritesProvider.notifier).toggleFavorite(node.id),
+            ),
+            IconButton(
               icon: Icon(Icons.timer_outlined, color: Colors.orange.withOpacity(0.8)),
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PomodoroScreen(taskNode: node))),
             ),
@@ -397,9 +447,12 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
               icon: Icon(Icons.note_alt_outlined, color: Theme.of(context).primaryColor.withOpacity(0.5)),
               onPressed: () => _editNotes(node),
             ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.grey),
+              onPressed: () => _deleteNode(node),
+            ),
           ],
         ),
-        onLongPress: () => _deleteNode(node),
       ),
     );
   }
@@ -520,7 +573,10 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
                       onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityScreen())),
                     ),
                     const SizedBox(width: 40), // Space for FAB
-                    IconButton(icon: Icon(Icons.favorite_border, color: Theme.of(context).primaryColor.withOpacity(0.5)), onPressed: () {}),
+                    IconButton(
+                      icon: Icon(Icons.favorite_border, color: Theme.of(context).primaryColor.withOpacity(0.5)),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen())),
+                    ),
                     IconButton(
                       icon: Icon(Icons.settings, color: Theme.of(context).primaryColor.withOpacity(0.5)),
                       onPressed: () {
