@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/gamification_provider.dart';
+import '../providers/todo_provider.dart';
 
 class ActivityScreen extends ConsumerStatefulWidget {
   const ActivityScreen({super.key});
@@ -17,6 +18,16 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(gamificationProvider);
+    final nodes = ref.watch(todoListProvider);
+
+    int totalLeaves = 0;
+    int completedLeaves = 0;
+    for (var node in nodes) {
+      final leaves = node.leafNodes;
+      totalLeaves += leaves.length;
+      completedLeaves += leaves.where((l) => l.isCompleted).length;
+    }
+    double overallProgress = totalLeaves == 0 ? 0 : completedLeaves / totalLeaves;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,15 +83,62 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
               return [];
             },
           ),
-          const Expanded(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Your daily activity is mapped above. Consistently mark topics as complete to maintain your streak!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
-                ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Overall Progress', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total Tasks: $totalLeaves', style: const TextStyle(color: Colors.grey)),
+                      Text('Completed: $completedLeaves', style: const TextStyle(color: Colors.green)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: overallProgress,
+                      minHeight: 12,
+                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                      color: Colors.greenAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text('Category Breakdown', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                  const SizedBox(height: 12),
+                  ...nodes.map((node) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(node.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              Text('${(node.completionPercentage * 100).toInt()}%', style: TextStyle(color: Theme.of(context).primaryColor)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: node.completionPercentage,
+                              minHeight: 6,
+                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
           )

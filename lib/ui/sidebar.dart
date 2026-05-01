@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+import '../models/todo_node.dart';
 import '../providers/todo_provider.dart';
 import '../providers/theme_provider.dart';
 
@@ -13,17 +14,14 @@ class AppSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Drawer(
-      child: ListView(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Offline Todo Settings'),
+        centerTitle: true,
+      ),
+      body: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Colors.deepPurpleAccent),
-            child: Text(
-              'Offline Todo\nSettings',
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ),
           ListTile(
             leading: const Icon(Icons.file_download),
             title: const Text('Export Data'),

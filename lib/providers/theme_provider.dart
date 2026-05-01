@@ -25,13 +25,13 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   static ThemeState _loadInitialState(SharedPreferences prefs) {
     final modeIndex = prefs.getInt('themeMode') ?? ThemeMode.system.index;
-    final variantName = prefs.getString('themeVariant') ?? ThemeVariant.pink.name;
+    final variantName = prefs.getString('themeVariant') ?? ThemeVariant.brown.name;
     
     return ThemeState(
       themeMode: ThemeMode.values[modeIndex],
       themeVariant: ThemeVariant.values.firstWhere(
         (e) => e.name == variantName, 
-        orElse: () => ThemeVariant.pink,
+        orElse: () => ThemeVariant.brown,
       ),
     );
   }

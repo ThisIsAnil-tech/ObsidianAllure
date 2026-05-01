@@ -8,6 +8,7 @@ import '../providers/gamification_provider.dart';
 import 'sidebar.dart';
 import 'search_screen.dart';
 import 'activity_screen.dart';
+import 'pomodoro_screen.dart';
 
 class NodeListScreen extends ConsumerStatefulWidget {
   final TodoNode? parentNode;
@@ -89,7 +90,7 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
                         ref.read(todoListProvider.notifier).addRootNode(newNode);
                       } else {
                         setState(() {
-                          widget.parentNode!.children.add(newNode);
+                          widget.parentNode!.children = List.from(widget.parentNode!.children)..add(newNode);
                         });
                         ref.read(todoListProvider.notifier).saveRootNode(widget.rootNode!);
                       }
@@ -112,10 +113,36 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
       ref.read(todoListProvider.notifier).deleteRootNode(node.id);
     } else {
       setState(() {
-        widget.parentNode!.children.removeWhere((n) => n.id == node.id);
+        widget.parentNode!.children = List.from(widget.parentNode!.children)..removeWhere((n) => n.id == node.id);
       });
       ref.read(todoListProvider.notifier).saveRootNode(widget.rootNode!);
     }
+  }
+
+  void _duplicateNode(TodoNode node) {
+    TodoNode duplicate(TodoNode original, bool isTopLevel) {
+      return TodoNode(
+        id: const Uuid().v4(),
+        name: isTopLevel ? '${original.name} (Copy)' : original.name,
+        createdAt: DateTime.now(),
+        notes: original.notes,
+        isCompleted: original.isCompleted,
+        children: original.children.map((e) => duplicate(e, false)).toList(),
+      );
+    }
+    
+    final newNode = duplicate(node, true);
+
+    if (widget.parentNode == null) {
+      ref.read(todoListProvider.notifier).addRootNode(newNode);
+    } else {
+      setState(() {
+        widget.parentNode!.children = List.from(widget.parentNode!.children)..add(newNode);
+      });
+      ref.read(todoListProvider.notifier).saveRootNode(widget.rootNode!);
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Duplicated ${node.name}')));
   }
 
   void _editNotes(TodoNode node) {
@@ -272,14 +299,22 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).textTheme.displayColor,
+                      color: Theme.of(context).textTheme.displayLarge?.color ?? Theme.of(context).textTheme.bodyLarge?.color,
                       decoration: isFullyCompleted ? TextDecoration.lineThrough : null,
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                  onPressed: () => _deleteNode(node),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: Colors.grey),
+                      onPressed: () => _duplicateNode(node),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                      onPressed: () => _deleteNode(node),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -336,7 +371,7 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: isCompleted ? FontWeight.normal : FontWeight.w600,
-            color: isCompleted ? Colors.grey : Theme.of(context).textTheme.bodyColor,
+            color: isCompleted ? Colors.grey : Theme.of(context).textTheme.bodyLarge?.color,
             decoration: isCompleted ? TextDecoration.lineThrough : null,
           ),
         ),
@@ -351,9 +386,18 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
                 ),
               )
             : null,
-        trailing: IconButton(
-          icon: Icon(Icons.note_alt_outlined, color: Theme.of(context).primaryColor.withOpacity(0.5)),
-          onPressed: () => _editNotes(node),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.timer_outlined, color: Colors.orange.withOpacity(0.8)),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PomodoroScreen(taskNode: node))),
+            ),
+            IconButton(
+              icon: Icon(Icons.note_alt_outlined, color: Theme.of(context).primaryColor.withOpacity(0.5)),
+              onPressed: () => _editNotes(node),
+            ),
+          ],
         ),
         onLongPress: () => _deleteNode(node),
       ),
@@ -372,15 +416,26 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         leading: Container(
-          padding: const EdgeInsets.all(10),
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: Theme.of(context).primaryColor.withOpacity(0.2),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            isFullyCompleted ? Icons.check_circle : Icons.folder_open,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          child: isFullyCompleted
+              ? Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                )
+              : Text(
+                  '${(node.completionPercentage * 100).toInt()}%',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
         ),
         title: Text(
           node.name,
@@ -390,7 +445,16 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
             decoration: isFullyCompleted ? TextDecoration.lineThrough : null,
           ),
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.copy, size: 20, color: Colors.grey),
+              onPressed: () => _duplicateNode(node),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
         onTap: () => _navigateToNode(node),
         onLongPress: () => _deleteNode(node),
       ),
@@ -431,7 +495,7 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
           ),
         ],
       ),
-      drawer: isRoot ? const AppSidebar() : null,
+      drawer: null,
       floatingActionButton: FloatingActionButton(
         elevation: 4,
         shape: const CircleBorder(),
@@ -460,7 +524,7 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
                     IconButton(
                       icon: Icon(Icons.settings, color: Theme.of(context).primaryColor.withOpacity(0.5)),
                       onPressed: () {
-                        Scaffold.of(context).openDrawer();
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSidebar()));
                       },
                     ),
                   ],
@@ -509,8 +573,12 @@ class _NodeListScreenState extends ConsumerState<NodeListScreen> {
                           if (oldIndex < newIndex) {
                             newIndex -= 1;
                           }
-                          final item = nodes.removeAt(oldIndex);
-                          nodes.insert(newIndex, item);
+                          
+                          // Convert to mutable list if it's not already
+                          widget.parentNode!.children = List.from(widget.parentNode!.children);
+                          
+                          final item = widget.parentNode!.children.removeAt(oldIndex);
+                          widget.parentNode!.children.insert(newIndex, item);
                         });
                         ref.read(todoListProvider.notifier).saveRootNode(widget.rootNode!);
                       }
