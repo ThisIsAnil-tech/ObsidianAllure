@@ -5,8 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
-import '../models/todo_node.dart';
 import '../providers/todo_provider.dart';
+import '../providers/theme_provider.dart';
 
 class AppSidebar extends ConsumerWidget {
   const AppSidebar({super.key});
@@ -42,7 +42,54 @@ class AppSidebar extends ConsumerWidget {
             subtitle: const Text('Wipes everything'),
             onTap: () => _clearData(context, ref),
           ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+          ),
+          _buildThemeModeToggle(context, ref),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text('Theme Style', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+          ),
+          _buildThemeVariantToggle(context, ref),
         ],
+      ),
+    );
+  }
+
+  Widget _buildThemeModeToggle(BuildContext context, WidgetRef ref) {
+    final themeState = ref.watch(themeProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: SegmentedButton<ThemeMode>(
+        segments: const [
+          ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto), label: Text('Auto')),
+          ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode), label: Text('Light')),
+          ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode), label: Text('Dark')),
+        ],
+        selected: {themeState.themeMode},
+        onSelectionChanged: (Set<ThemeMode> newSelection) {
+          ref.read(themeProvider.notifier).setThemeMode(newSelection.first);
+        },
+      ),
+    );
+  }
+
+  Widget _buildThemeVariantToggle(BuildContext context, WidgetRef ref) {
+    final themeState = ref.watch(themeProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: SegmentedButton<ThemeVariant>(
+        segments: const [
+          ButtonSegment(value: ThemeVariant.pink, icon: Icon(Icons.favorite), label: Text('Girls')),
+          ButtonSegment(value: ThemeVariant.brown, icon: Icon(Icons.coffee), label: Text('Boys')),
+        ],
+        selected: {themeState.themeVariant},
+        onSelectionChanged: (Set<ThemeVariant> newSelection) {
+          ref.read(themeProvider.notifier).setThemeVariant(newSelection.first);
+        },
       ),
     );
   }
