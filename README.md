@@ -1,51 +1,66 @@
-### Obsidian Allure
+<div align="center">
+  <h1>🌟 Obsidian Allure</h1>
+  <p><b>Your Offline, Gamified Career & Goal Tracker</b></p>
 
-A powerful, fully offline, hierarchical to-do list and career progression tracker built with Flutter. Obsidian Allure helps you organize your goals, domains, and tasks systematically while tracking your progress with engaging gamification mechanics.
+  <p>
+    <img alt="Platform" src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-blue?style=flat-square">
+    <img alt="Framework" src="https://img.shields.io/badge/Framework-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white">
+    <img alt="Database" src="https://img.shields.io/badge/Database-Hive-orange?style=flat-square">
+    <img alt="Offline First" src="https://img.shields.io/badge/Offline-100%25-success?style=flat-square">
+  </p>
+</div>
 
-## ✨ Features
+---
 
-- **Offline First**: All data is stored locally on your device using Hive. No internet connection required.
-- **Hierarchical Structure**: Organize your long-term goals logically into `Domains` → `Subtopics` → `Topics/Tasks`.
-- **Gamification**: Stay motivated with XP, streaks, and an interactive activity heatmap.
-- **Deep JSON Import & Export**: Easily backup or share your complete curriculum and tasks using a deeply nested JSON format.
-- **Beautiful UI**: A sleek, dark-themed interface built for focus and productivity.
-- **Cross-Platform**: Neatly designed for optimal experience across mobile phones and tablets.
+**Obsidian Allure** is a powerful, fully offline, hierarchical to-do list and progression tracker. Built with Flutter, it helps you organize complex goals systematically while keeping you highly motivated through interactive gamification and advanced productivity tools.
+
+## ✨ Key Features
+
+- 🗂️ **Infinite Hierarchies:** Organize your long-term goals logically into `Domains` → `Subtopics` → `Topics` → `Tasks`. Go as deep as you need!
+- 🏆 **Gamification Engine:** Stay motivated by earning XP, leveling up, maintaining daily streaks, and filling out your activity heatmap.
+- 🍅 **Focus Mode (Pomodoro):** Launch a built-in 25-minute Pomodoro timer directly from any task. Completing a focus session rewards you with massive XP bonuses!
+- ❤️ **Favorites System:** "Like" any task to instantly save it to your Favorites Page, accessible straight from the bottom navigation bar.
+- ↩️ **Safe Deletions:** Accidental tap? No problem. Enjoy a 4-second **Undo** safety net whenever you delete a task or folder.
+- 📋 **Template Duplication:** Easily duplicate entire root folders and their deeply nested contents to create reusable syllabus or project templates.
+- 📊 **Enhanced Analytics:** Track your overall progress dynamically with top-level category breakdowns and task completion percentages.
+- 🎨 **Dynamic Theming:** Switch between "Boys" (Brown/Earthy) and "Girls" (Pink/Vibrant) aesthetic variants, alongside full Light/Dark mode support.
+- 📦 **Deep JSON Import & Export:** Back up your entire curriculum offline or share it using a clean, deeply nested JSON format.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Flutter SDK (`>=3.3.0 <4.0.0`)
-- Android Studio / Xcode (for emulation/building)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (`>=3.3.0 <4.0.0`)
+- Android Studio / VS Code (for emulation/building)
 
 ### Installation
 
-1. Clone this repository:
+1. **Clone this repository:**
    ```bash
-   git clone https://github.com/your-username/obsidian-allure.git
+   git clone https://github.com/ThisIsAnil-tech/ObsidianAllure.git
    ```
-2. Navigate to the project directory:
+2. **Navigate to the project directory:**
    ```bash
    cd obsidian-allure
    ```
-3. Install dependencies:
+3. **Install dependencies:**
    ```bash
    flutter pub get
    ```
-4. Run the app:
+4. **Run the app:**
    ```bash
    flutter run
    ```
 
-### Building the APK
-To build a release APK for Android, run:
+## 🛠️ Building the APK
+To build a release APK for Android deployment, run:
 ```bash
 flutter build apk --release
 ```
-The output file will be generated at `build/app/outputs/flutter-apk/app-release.apk`.
+*The output file will be generated at `build/app/outputs/flutter-apk/app-release.apk`.*
 
 ## 📂 JSON Import/Export Format
 
-Obsidian Allure seamlessly supports importing and exporting your goals via a nested JSON structure. 
+Obsidian Allure supports importing and exporting massive goal trees instantly. 
 
 **Example format:**
 ```json
@@ -58,19 +73,20 @@ Obsidian Allure seamlessly supports importing and exporting your goals via a nes
       ]
     },
     "Deep Learning": [
-      "Understand Neural Networks",
-      "Learn Backpropagation"
+      "Understand Neural Networks"
     ]
   }
 }
 ```
 
-## 🛠️ Built With
+## 🏗️ Architecture Stack
 
 - **[Flutter](https://flutter.dev/)** - UI Toolkit
 - **[Hive](https://docs.hivedb.dev/)** - Fast, lightweight NoSQL local database
 - **[Riverpod](https://riverpod.dev/)** - Robust State Management
+- **[Shared Preferences](https://pub.dev/packages/shared_preferences)** - Local storage for aesthetic toggles and likes
 
 ---
-
-*“Your career journey, beautifully organized.”*
+<div align="center">
+  <p><i>“Your career journey, beautifully organized.”</i></p>
+</div>
